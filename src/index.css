@@ -1,0 +1,162 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  /* Core surfaces (defaults — overridden per data-theme below) */
+  --color-bg: #0a0c17;
+  --color-bg-raised: #0f1224;
+  --color-surface: #12162a;
+  --color-surface-2: #171c35;
+  --color-border: #232a4d;
+  --color-border-soft: #1a2040;
+
+  /* Text */
+  --color-ink: #e9eaf6;
+  --color-ink-dim: #a6abcf;
+  --color-ink-faint: #6a6f96;
+
+  /* Brand */
+  --color-brand: #4f46e5;
+  --color-brand-hover: #6058ef;
+  --color-brand-dim: #3730a3;
+  --color-violet: #8b5cf6;
+
+  /* Agent palette (mirrors the pipeline diagram) */
+  --color-agent-blue: #3b82f6;
+  --color-agent-green: #22c55e;
+  --color-agent-purple: #8b5cf6;
+  --color-agent-orange: #f59e0b;
+  --color-agent-teal: #14b8a6;
+  --color-agent-red: #ef4444;
+  --color-agent-yellow: #eab308;
+
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-card: 1.25rem;
+}
+
+/* ---- Theme tokens ---- */
+/* Dark is the default look; :root carries it so unstyled/first-paint stays dark. */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0a0c17;
+  --color-bg-raised: #0f1224;
+  --color-surface: #12162a;
+  --color-surface-2: #171c35;
+  --color-border: #232a4d;
+  --color-border-soft: #1a2040;
+  --color-ink: #e9eaf6;
+  --color-ink-dim: #a6abcf;
+  --color-ink-faint: #6a6f96;
+  --color-brand-hover: #6058ef;
+  --color-brand-dim: #3730a3;
+  --bg-glow-1: rgba(79, 70, 229, 0.16);
+  --bg-glow-2: rgba(139, 92, 246, 0.12);
+
+  /* Tier badge text tones (need to stay readable on both themes) */
+  --tier-dream: #c4b5fd;
+  --tier-reach: #fcd34d;
+  --tier-match: #a5b4fc;
+  --tier-safe: #86efac;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f5f6fb;
+  --color-bg-raised: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef0f9;
+  --color-border: #dde1f2;
+  --color-border-soft: #e7e9f6;
+  --color-ink: #14172b;
+  --color-ink-dim: #4c5079;
+  --color-ink-faint: #8286ab;
+  --color-brand-hover: #4338ca;
+  --color-brand-dim: #e0ddfb;
+  --bg-glow-1: rgba(79, 70, 229, 0.08);
+  --bg-glow-2: rgba(139, 92, 246, 0.07);
+
+  --tier-dream: #7c3aed;
+  --tier-reach: #b45309;
+  --tier-match: #4338ca;
+  --tier-safe: #15803d;
+}
+
+html {
+  transition: color-scheme 0.2s ease;
+}
+
+body {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(circle at 12% 8%, var(--bg-glow-1), transparent 42%),
+    radial-gradient(circle at 88% 92%, var(--bg-glow-2), transparent 45%);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-ink-faint); }
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.card {
+  background: linear-gradient(180deg, var(--color-surface), var(--color-bg-raised));
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  box-shadow: 0 1px 2px rgba(20, 23, 43, 0.04), 0 8px 24px -12px rgba(20, 23, 43, 0.12);
+}
+
+:root[data-theme="dark"] .card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 12px 28px -14px rgba(0, 0, 0, 0.45);
+}
+
+.rail-track {
+  background-image: linear-gradient(90deg, transparent, var(--color-border) 20%, var(--color-border) 80%, transparent);
+}
+
+.input {
+  @apply w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-raised)] px-3.5 py-2.5 text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-faint)] outline-none transition-colors;
+}
+.input:focus {
+  @apply border-[var(--color-brand)] ring-2 ring-[var(--color-brand)]/25;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--color-brand)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2.5 text-sm font-semibold text-[var(--color-ink)] transition-colors hover:border-[var(--color-brand)]/50 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.badge {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+}
+
