@@ -2,8 +2,12 @@ import axios from "axios";
 
 export const TOKEN_KEY = "eduguide_token";
 
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
+const cleanBaseUrl = rawBaseUrl.replace(/\/+$/, "");
+const baseURL = cleanBaseUrl.endsWith("/api/v1") ? cleanBaseUrl : `${cleanBaseUrl}/api/v1`;
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api/v1",
+  baseURL,
 });
 
 apiClient.interceptors.request.use((config) => {
