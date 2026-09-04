@@ -11,7 +11,9 @@ import {
   GraduationCap,
   Sparkles,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
+import { listNotifications } from "../api/misc";
 import { ThemeToggle } from "./ThemeToggle";
 import { UserProfileMenu } from "./UserProfileMenu";
 
@@ -28,6 +30,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: () => listNotifications(),
+    staleTime: 30000,
+  });
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
@@ -65,6 +75,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <item.icon className="h-4 w-4 shrink-0 transition-transform group-hover:scale-110" />
               <span>{item.label}</span>
+              {item.to === "/notifications" && unreadCount > 0 && (
+                <span className="ml-auto rounded-full bg-[var(--color-brand)] px-1.5 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                  {unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
 
@@ -183,10 +198,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               onClick={() => navigate("/notifications")}
               aria-label="Notifications"
-              className="grid h-9 w-9 place-items-center rounded-full text-[var(--color-ink-dim)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] transition-colors"
-              title="Notifications"
+              className="relative grid h-9 w-9 place-items-center rounded-full text-[var(--color-ink-dim)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] transition-colors"
+              title={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
             >
               <Bell className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 ring-2 ring-[var(--color-bg)]"></span>
+                </span>
+              )}
             </button>
 
             <ThemeToggle />

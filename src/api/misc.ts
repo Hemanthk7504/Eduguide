@@ -106,3 +106,14 @@ export async function markNotificationRead(id: string): Promise<NotificationOut>
   const { data } = await apiClient.patch<NotificationOut>(`/notifications/${id}/read`);
   return data;
 }
+
+export async function markAllNotificationsRead(): Promise<{ message: string }> {
+  const { data } = await apiClient.post<{ message: string }>("/notifications/read-all");
+  return data;
+}
+
+export async function deleteNotification(id: string): Promise<{ message: string }> {
+  const { data } = await apiClient.delete<{ message: string }>(`/notifications/${id}`);
+  return data;
+}
+
