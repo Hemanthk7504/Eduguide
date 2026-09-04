@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,10 +12,13 @@ import {
   ArrowRight,
   Sparkles,
   ExternalLink,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { register as registerUser, checkVerification, resendVerification } from "../api/auth";
 import { useAuth } from "../hooks/useAuth";
 import { AuthLayout, Field } from "./Login";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 
 const schema = z.object({
   full_name: z.string().min(2, "Enter your full name"),
@@ -27,6 +30,7 @@ type FormValues = z.infer<typeof schema>;
 export default function Register() {
   const { setToken } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [step, setStep] = useState<"form" | "verification_pending" | "verified">("form");
   const [registeredEmail, setRegisteredEmail] = useState<string>("");
@@ -35,6 +39,7 @@ export default function Register() {
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   const pollIntervalRef = useRef<any>(null);
 
@@ -43,6 +48,17 @@ export default function Register() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  // If navigated from login with pending verification
+  useEffect(() => {
+    if (location.state?.email) {
+      setRegisteredEmail(location.state.email);
+      if (location.state.verifyLink) {
+        setDevVerifyLink(location.state.verifyLink);
+      }
+      setStep("verification_pending");
+    }
+  }, [location.state]);
 
   // Handle signup form submit
   async function onSubmit(values: FormValues) {
@@ -176,7 +192,7 @@ export default function Register() {
               <p className="text-xs text-[var(--color-brand)] animate-in fade-in">{resendStatus}</p>
             )}
 
-            {/* Test helper link if SMTP is simulated */}
+            {/* Test helper link if SMTP credentials are still pending */}
             {devVerifyLink && (
               <div className="pt-2">
                 <a
@@ -244,7 +260,7 @@ export default function Register() {
   // State 1: Registration Form
   return (
     <AuthLayout>
-      <div className="mb-8 flex items-center gap-2">
+      <div className="mb-6 flex items-center gap-2">
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-violet)]">
           <GraduationCap className="h-5 w-5 text-white" />
         </span>
@@ -255,15 +271,60 @@ export default function Register() {
         Enter your details to receive an instant verification link.
       </p>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
+      {/* Google Sign-up Button */}
+      <div className="mt-6">
+        <GoogleSignInButton
+          text="Sign up with Google"
+          onSuccess={(token) => {
+            setToken(token);
+            navigate("/onboarding");
+          }}
+          onVerificationRequired={(email, verifyLink) => {
+            setRegisteredEmail(email);
+            if (verifyLink) setDevVerifyLink(verifyLink);
+            setStep("verification_pending");
+          }}
+          onError={(msg) => setServerError(msg)}
+        />
+      </div>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-[var(--color-border-soft)]" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-[var(--color-bg-raised)] px-2 text-[var(--color-ink-faint)]">
+            Or register with email
+          </span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label="Full name" error={errors.full_name?.message}>
           <input className="input" placeholder="Hemanth Kumar" {...field("full_name")} />
         </Field>
         <Field label="Email address" error={errors.email?.message}>
           <input type="email" className="input" placeholder="you@example.com" {...field("email")} />
         </Field>
+
         <Field label="Password" error={errors.password?.message}>
-          <input type="password" className="input" placeholder="At least 8 characters" {...field("password")} />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              className="input pr-10"
+              placeholder="At least 8 characters"
+              {...field("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] transition-colors"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </Field>
 
         {serverError && (

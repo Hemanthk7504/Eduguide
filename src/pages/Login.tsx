@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { GraduationCap, Loader2 } from "lucide-react";
+import { GraduationCap, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { login } from "../api/auth";
 import { useAuth } from "../hooks/useAuth";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -18,6 +19,9 @@ export default function Login() {
   const { setToken } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+
   const {
     register: field,
     handleSubmit,
@@ -26,18 +30,23 @@ export default function Login() {
 
   async function onSubmit(values: FormValues) {
     setServerError(null);
+    setUnverifiedEmail(null);
     try {
       const { access_token } = await login(values.email, values.password);
       setToken(access_token);
       navigate("/dashboard", { replace: true });
     } catch (err: any) {
-      setServerError(err?.response?.data?.detail ?? "Couldn't sign in. Check your credentials.");
+      const detail = err?.response?.data?.detail ?? "Couldn't sign in. Check your credentials.";
+      setServerError(detail);
+      if (err?.response?.status === 403 || detail.toLowerCase().includes("verify")) {
+        setUnverifiedEmail(values.email);
+      }
     }
   }
 
   return (
     <AuthLayout>
-      <div className="mb-8 flex items-center gap-2">
+      <div className="mb-6 flex items-center gap-2">
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-violet)]">
           <GraduationCap className="h-5 w-5 text-white" />
         </span>
@@ -48,7 +57,33 @@ export default function Login() {
         Sign in to see your personalized admission plan.
       </p>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-4">
+      {/* Google Sign-in Button */}
+      <div className="mt-6">
+        <GoogleSignInButton
+          text="Sign in with Google"
+          onSuccess={(token) => {
+            setToken(token);
+            navigate("/dashboard", { replace: true });
+          }}
+          onVerificationRequired={(email, verifyLink) => {
+            navigate("/register", { state: { email, verifyLink } });
+          }}
+          onError={(msg) => setServerError(msg)}
+        />
+      </div>
+
+      <div className="relative my-5">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-[var(--color-border-soft)]" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-[var(--color-bg-raised)] px-2 text-[var(--color-ink-faint)]">
+            Or sign in with email
+          </span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Field label="Email" error={errors.email?.message}>
           <input
             type="email"
@@ -57,14 +92,43 @@ export default function Login() {
             {...field("email")}
           />
         </Field>
+
         <Field label="Password" error={errors.password?.message}>
-          <input type="password" className="input" placeholder="••••••••" {...field("password")} />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              className="input pr-10"
+              placeholder="••••••••"
+              {...field("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] transition-colors"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </Field>
 
         {serverError && (
-          <p className="rounded-lg bg-[var(--color-agent-red)]/10 px-3 py-2 text-sm text-[var(--color-agent-red)]">
-            {serverError}
-          </p>
+          <div className="rounded-xl bg-[var(--color-agent-red)]/10 p-3 text-xs text-[var(--color-agent-red)] space-y-1.5">
+            <div className="flex items-center gap-1.5 font-semibold">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{serverError}</span>
+            </div>
+            {unverifiedEmail && (
+              <button
+                type="button"
+                onClick={() => navigate("/register", { state: { email: unverifiedEmail } })}
+                className="font-medium underline hover:text-[var(--color-brand)] block"
+              >
+                Go to Verification Screen & Resend Email →
+              </button>
+            )}
+          </div>
         )}
 
         <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
@@ -90,7 +154,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         <ThemeToggle />
       </div>
       <div className="w-full max-w-md">
-        <div className="card p-8">{children}</div>
+        <div className="card p-8 shadow-xl">{children}</div>
       </div>
     </div>
   );

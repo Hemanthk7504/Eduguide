@@ -38,6 +38,22 @@ export interface CheckVerificationResponse {
   user?: UserOut;
 }
 
+export interface GoogleAuthPayload {
+  email: string;
+  full_name?: string;
+  token?: string;
+}
+
+export interface GoogleAuthResponse {
+  is_verified: boolean;
+  message: string;
+  access_token?: string;
+  token_type?: string;
+  user?: UserOut;
+  email?: string;
+  verification_link?: string;
+}
+
 // ---- Student Profile ----
 export type ExamType =
   | "TG EAPCET"

@@ -5,6 +5,8 @@ import type {
   UserRegisterResponse,
   VerifyEmailResponse,
   CheckVerificationResponse,
+  GoogleAuthPayload,
+  GoogleAuthResponse,
 } from "../types/api";
 
 export interface RegisterPayload {
@@ -52,5 +54,10 @@ export async function resendVerification(email: string): Promise<{ message: stri
   const { data } = await apiClient.post<{ message: string; verification_link?: string }>("/auth/resend-verification", {
     email,
   });
+  return data;
+}
+
+export async function googleAuth(payload: GoogleAuthPayload): Promise<GoogleAuthResponse> {
+  const { data } = await apiClient.post<GoogleAuthResponse>("/auth/google", payload);
   return data;
 }
