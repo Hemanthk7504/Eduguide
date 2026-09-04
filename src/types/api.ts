@@ -6,11 +6,36 @@ export interface UserOut {
   full_name: string;
   email: string;
   role: Role;
+  is_verified?: boolean;
+}
+
+export interface UserRegisterResponse {
+  id: string;
+  full_name: string;
+  email: string;
+  is_verified: boolean;
+  message: string;
+  verification_link?: string;
 }
 
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+}
+
+export interface VerifyEmailResponse {
+  message: string;
+  is_verified: boolean;
+  access_token: string;
+  token_type: string;
+  user: UserOut;
+}
+
+export interface CheckVerificationResponse {
+  is_verified: boolean;
+  access_token?: string;
+  token_type?: string;
+  user?: UserOut;
 }
 
 // ---- Student Profile ----

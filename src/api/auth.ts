@@ -1,5 +1,11 @@
 import { apiClient } from "./client";
-import type { LoginResponse, UserOut } from "../types/api";
+import type {
+  LoginResponse,
+  UserOut,
+  UserRegisterResponse,
+  VerifyEmailResponse,
+  CheckVerificationResponse,
+} from "../types/api";
 
 export interface RegisterPayload {
   full_name: string;
@@ -7,8 +13,8 @@ export interface RegisterPayload {
   password: string;
 }
 
-export async function register(payload: RegisterPayload): Promise<UserOut> {
-  const { data } = await apiClient.post<UserOut>("/auth/register", payload);
+export async function register(payload: RegisterPayload): Promise<UserRegisterResponse> {
+  const { data } = await apiClient.post<UserRegisterResponse>("/auth/register", payload);
   return data;
 }
 
@@ -24,5 +30,27 @@ export async function login(email: string, password: string): Promise<LoginRespo
 
 export async function fetchMe(): Promise<UserOut> {
   const { data } = await apiClient.get<UserOut>("/auth/me");
+  return data;
+}
+
+export async function verifyEmail(token: string, email?: string): Promise<VerifyEmailResponse> {
+  const { data } = await apiClient.post<VerifyEmailResponse>("/auth/verify-email", {
+    token,
+    email: email || undefined,
+  });
+  return data;
+}
+
+export async function checkVerification(email: string): Promise<CheckVerificationResponse> {
+  const { data } = await apiClient.get<CheckVerificationResponse>("/auth/check-verification", {
+    params: { email },
+  });
+  return data;
+}
+
+export async function resendVerification(email: string): Promise<{ message: string; verification_link?: string }> {
+  const { data } = await apiClient.post<{ message: string; verification_link?: string }>("/auth/resend-verification", {
+    email,
+  });
   return data;
 }
