@@ -191,6 +191,7 @@ export interface CollegeOut {
   id: string;
   name: string;
   city: string;
+  district?: string;
   state: string;
   affiliation: string;
   naac_grade: string | null;
@@ -275,11 +276,17 @@ export interface DashboardResponse {
   last_report_url: string | null;
 }
 
-// ---- Reports ----
+export interface ReportSummary {
+  college_count?: number;
+  scholarship_count?: number;
+  branch_count?: number;
+  [key: string]: any;
+}
+
 export interface Report {
   id: string;
   file_path: string;
-  summary: string;
+  summary: ReportSummary | string;
   profile_id?: string;
   created_at?: string;
 }

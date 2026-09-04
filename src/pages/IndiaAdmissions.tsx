@@ -8,6 +8,9 @@ import {
   X,
   Briefcase,
   Sparkles,
+  Layers,
+  LayoutGrid,
+  Filter,
 } from "lucide-react";
 import { getCollegeCutoffs, listColleges } from "../api/agents";
 import { AppShell } from "../components/AppShell";
@@ -20,7 +23,7 @@ const POPULAR_STATES = [
   "Karnataka",
   "Maharashtra",
   "Tamil Nadu",
-  "Delhi NCR",
+  "Delhi",
 ];
 
 const COUNSELING_PORTALS = [
@@ -32,14 +35,15 @@ const COUNSELING_PORTALS = [
 ];
 
 export default function IndiaAdmissions() {
-  const [city, setCity] = useState("");
   const [stateFilter, setStateFilter] = useState("Telangana");
+  const [selectedDistrict, setSelectedDistrict] = useState("");
   const [search, setSearch] = useState("");
+  const [groupByDistrict, setGroupByDistrict] = useState(true);
   const [selected, setSelected] = useState<CollegeOut | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["colleges", city],
-    queryFn: () => listColleges(city || undefined),
+    queryKey: ["colleges"],
+    queryFn: () => listColleges(),
   });
 
   const states = useMemo(() => {
@@ -50,22 +54,57 @@ export default function IndiaAdmissions() {
     return list.sort();
   }, [data]);
 
-  const cities = useMemo(() => {
-    const relevant = stateFilter
+  // Compute available districts for the selected state with college counts
+  const districts = useMemo(() => {
+    const relevant = stateFilter && stateFilter !== "All India"
       ? (data ?? []).filter((c) => c.state?.toLowerCase() === stateFilter.toLowerCase())
       : data ?? [];
-    const set = new Set(relevant.map((c) => c.city).filter(Boolean));
-    return Array.from(set).sort();
+
+    const counts: Record<string, number> = {};
+    relevant.forEach((c) => {
+      const d = c.district || c.city || "Other";
+      counts[d] = (counts[d] || 0) + 1;
+    });
+
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
   }, [data, stateFilter]);
 
-  const filtered = (data ?? []).filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
-    const matchesState = stateFilter
-      ? c.state?.toLowerCase() === stateFilter.toLowerCase()
-      : true;
-    const matchesCity = city ? c.city.toLowerCase() === city.toLowerCase() : true;
-    return matchesSearch && matchesState && matchesCity;
-  });
+  // Filter colleges based on search, state, and district
+  const filtered = useMemo(() => {
+    return (data ?? []).filter((c) => {
+      const matchesSearch =
+        c.name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.district && c.district.toLowerCase().includes(search.toLowerCase())) ||
+        (c.city && c.city.toLowerCase().includes(search.toLowerCase())) ||
+        (c.branches_offered && c.branches_offered.some((b) => b.toLowerCase().includes(search.toLowerCase())));
+
+      const matchesState =
+        !stateFilter || stateFilter === "All India"
+          ? true
+          : c.state?.toLowerCase() === stateFilter.toLowerCase();
+
+      const matchesDistrict =
+        !selectedDistrict
+          ? true
+          : (c.district && c.district.toLowerCase() === selectedDistrict.toLowerCase()) ||
+            (c.city && c.city.toLowerCase() === selectedDistrict.toLowerCase());
+
+      return matchesSearch && matchesState && matchesDistrict;
+    });
+  }, [data, search, stateFilter, selectedDistrict]);
+
+  // Group filtered colleges by district
+  const groupedColleges = useMemo(() => {
+    const groups: Record<string, CollegeOut[]> = {};
+    filtered.forEach((c) => {
+      const d = c.district || c.city || "Other District";
+      if (!groups[d]) groups[d] = [];
+      groups[d].push(c);
+    });
+    return groups;
+  }, [filtered]);
 
   return (
     <AppShell>
@@ -75,19 +114,19 @@ export default function IndiaAdmissions() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400">
               <span>🇮🇳</span>
-              <span>Indian Higher Education & State Counselling</span>
+              <span>State & District Wise Higher Education Directory</span>
             </div>
             <h1 className="mt-2 font-display text-2xl md:text-3xl font-bold tracking-tight">
               India Admissions & College Directory
             </h1>
             <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-              Explore accredited engineering colleges, university cutoff ranks (TG EAPCET, AP EAPCET, JEE), seat intake, and annual fees.
+              Explore accredited engineering colleges organized district-by-district with cutoff ranks (TG EAPCET, AP EAPCET, KCET, JEE Main), seat intake, and annual fees.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-medium text-[var(--color-ink-dim)]">
-              {filtered.length} Institutions Found
+              {filtered.length} Institutions in View
             </span>
           </div>
         </div>
@@ -116,66 +155,138 @@ export default function IndiaAdmissions() {
           </div>
         </div>
 
-        {/* Search & Filter Controls */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* State Selector Tabs */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-dim)]">
+              Select State
+            </span>
+            {selectedDistrict && (
+              <button
+                onClick={() => setSelectedDistrict("")}
+                className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+              >
+                Clear District Filter ({selectedDistrict})
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {["All India", ...states].map((st) => (
+              <button
+                key={st}
+                onClick={() => {
+                  setStateFilter(st);
+                  setSelectedDistrict("");
+                }}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  stateFilter === st
+                    ? "bg-orange-500 text-white shadow-xs ring-2 ring-orange-500/20"
+                    : "border border-[var(--color-border-soft)] bg-[var(--color-surface-2)] text-[var(--color-ink-dim)] hover:bg-[var(--color-surface-2)]/80 hover:text-[var(--color-ink)]"
+                }`}
+              >
+                <span>{st === "All India" ? "🇮🇳" : "📍"}</span>
+                <span>{st}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* District Selector Filter Pills */}
+        {districts.length > 0 && (
+          <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-2)]/50 p-3 space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-[var(--color-ink-dim)] flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-orange-500" />
+                <span>Districts in {stateFilter || "India"}</span>
+              </span>
+              <span className="text-[11px] text-[var(--color-ink-faint)]">
+                Click a district to narrow down colleges
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setSelectedDistrict("")}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                  !selectedDistrict
+                    ? "bg-[var(--color-brand)] text-white shadow-2xs font-semibold"
+                    : "border border-[var(--color-border-soft)] bg-[var(--color-bg)] text-[var(--color-ink-dim)] hover:text-[var(--color-ink)]"
+                }`}
+              >
+                All Districts ({filtered.length})
+              </button>
+
+              {districts.map((d) => (
+                <button
+                  key={d.name}
+                  onClick={() => setSelectedDistrict(selectedDistrict === d.name ? "" : d.name)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                    selectedDistrict === d.name
+                      ? "bg-orange-600 text-white shadow-2xs font-semibold ring-1 ring-orange-600/40"
+                      : "border border-[var(--color-border-soft)] bg-[var(--color-bg)] text-[var(--color-ink-dim)] hover:border-orange-500/40 hover:text-[var(--color-ink)]"
+                  }`}
+                >
+                  <span>{d.name}</span>
+                  <span className="ml-1.5 opacity-70 text-[10px]">({d.count})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Search & View Mode Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <div className="relative flex-1 min-w-[240px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)]" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search Indian colleges (e.g. JNTU, CBIT, Vasavi, IIT)..."
+              placeholder="Search by college name, district, or branch (e.g. CBIT, Warangal, CSE)..."
               className="input pl-9"
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={stateFilter}
-              onChange={(e) => {
-                setStateFilter(e.target.value);
-                setCity("");
-              }}
-              className="input w-auto text-xs font-medium"
+          <div className="flex items-center gap-1 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-2)] p-1 text-xs">
+            <button
+              onClick={() => setGroupByDistrict(true)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-all ${
+                groupByDistrict
+                  ? "bg-[var(--color-bg-raised)] text-[var(--color-ink)] shadow-2xs font-semibold"
+                  : "text-[var(--color-ink-dim)] hover:text-[var(--color-ink)]"
+              }`}
             >
-              <option value="">All States</option>
-              {states.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            {cities.length > 0 && (
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="input w-auto text-xs font-medium"
-              >
-                <option value="">All Cities in {stateFilter || "India"}</option>
-                {cities.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            )}
+              <Layers className="h-3.5 w-3.5" />
+              <span>Group by District</span>
+            </button>
+            <button
+              onClick={() => setGroupByDistrict(false)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-all ${
+                !groupByDistrict
+                  ? "bg-[var(--color-bg-raised)] text-[var(--color-ink)] shadow-2xs font-semibold"
+                  : "text-[var(--color-ink-dim)] hover:text-[var(--color-ink)]"
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span>Grid View</span>
+            </button>
           </div>
         </div>
 
-        {/* College Grid */}
+        {/* College Directory View */}
         <div className="mt-4">
           {isLoading && <ListSkeleton />}
+
           {!isLoading && filtered.length === 0 && (
             <div className="card p-8 text-center">
               <Building2 className="mx-auto h-8 w-8 text-[var(--color-ink-faint)]" />
-              <h3 className="mt-2 text-base font-semibold">No colleges matching filters</h3>
+              <h3 className="mt-2 text-base font-semibold">No colleges matching your filters</h3>
               <p className="mt-1 text-sm text-[var(--color-ink-faint)]">
-                Try switching the state to Telangana or Andhra Pradesh, or clearing search keywords.
+                Try switching the district or state, or clearing search keywords.
               </p>
               <button
                 onClick={() => {
-                  setStateFilter("");
-                  setCity("");
+                  setStateFilter("Telangana");
+                  setSelectedDistrict("");
                   setSearch("");
                 }}
                 className="btn-secondary mt-3 text-xs"
@@ -185,71 +296,109 @@ export default function IndiaAdmissions() {
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setSelected(c)}
-                className="card group relative flex flex-col justify-between p-5 text-left transition-all duration-200 hover:-translate-y-1 hover:border-[var(--color-brand)]/50 hover:shadow-lg"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--color-agent-teal)]/15 text-[var(--color-agent-teal)] font-bold">
-                      <Building2 className="h-5 w-5" />
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border-soft)] bg-[var(--color-surface-2)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-ink-dim)]">
-                      {c.affiliation?.split("/")[0] || "Accredited"}
-                    </span>
-                  </div>
-
-                  <h3 className="mt-3 font-semibold text-[var(--color-ink)] group-hover:text-[var(--color-brand)] transition-colors line-clamp-2">
-                    {c.name}
-                  </h3>
-
-                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-[var(--color-ink-faint)]">
-                    <MapPin className="h-3 w-3" /> {c.city}, {c.state}
-                  </p>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
-                    <div className="rounded-lg bg-[var(--color-surface-2)] p-2">
-                      <span className="text-[var(--color-ink-faint)]">NAAC Grade</span>
-                      <p className="font-semibold text-[var(--color-ink)]">{c.naac_grade || "A"}</p>
-                    </div>
-                    <div className="rounded-lg bg-[var(--color-surface-2)] p-2">
-                      <span className="text-[var(--color-ink-faint)]">Tuition / Year</span>
-                      <p className="font-semibold text-emerald-600 dark:text-emerald-400">
-                        {c.fee_per_year ? `₹${(c.fee_per_year / 100000).toFixed(2)} Lakh` : "Govt / Subsidized"}
-                      </p>
+          {/* Grouped by District View */}
+          {groupByDistrict && !isLoading && (
+            <div className="space-y-8">
+              {Object.entries(groupedColleges).map(([districtName, colleges]) => (
+                <div key={districtName} className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-[var(--color-border-soft)] pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="grid h-6 w-6 place-items-center rounded-md bg-orange-500/15 text-orange-600 dark:text-orange-400 font-bold text-xs">
+                        📍
+                      </span>
+                      <h2 className="text-base font-bold text-[var(--color-ink)]">
+                        {districtName} District
+                      </h2>
+                      <span className="rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-ink-dim)]">
+                        {colleges.length} {colleges.length === 1 ? "College" : "Colleges"}
+                      </span>
                     </div>
                   </div>
 
-                  {c.placement_stats && (
-                    <div className="mt-2.5 flex items-center justify-between rounded-lg bg-[var(--color-surface-2)]/60 px-2.5 py-1.5 text-[11px] text-[var(--color-ink-dim)]">
-                      <span className="inline-flex items-center gap-1">
-                        <Briefcase className="h-3 w-3 text-indigo-500" />
-                        Avg Package: ₹{c.placement_stats.avg_package || 7.5} LPA
-                      </span>
-                      <span className="font-semibold text-emerald-500">
-                        {c.placement_stats.placement_pct || 85}% Placed
-                      </span>
-                    </div>
-                  )}
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {colleges.map((c) => (
+                      <CollegeCard key={c.id} college={c} onSelect={() => setSelected(c)} />
+                    ))}
+                  </div>
                 </div>
+              ))}
+            </div>
+          )}
 
-                <div className="mt-4 pt-3 border-t border-[var(--color-border-soft)]">
-                  <span className="text-[11px] font-medium text-[var(--color-brand)] flex items-center justify-between">
-                    <span>View Category Cutoffs & Branches</span>
-                    <Sparkles className="h-3 w-3" />
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
+          {/* Flat Grid View */}
+          {!groupByDistrict && !isLoading && (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((c) => (
+                <CollegeCard key={c.id} college={c} onSelect={() => setSelected(c)} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {selected && <IndiaCollegeDetailModal college={selected} onClose={() => setSelected(null)} />}
     </AppShell>
+  );
+}
+
+function CollegeCard({ college: c, onSelect }: { college: CollegeOut; onSelect: () => void }) {
+  return (
+    <button
+      onClick={onSelect}
+      className="card group relative flex flex-col justify-between p-5 text-left transition-all duration-200 hover:-translate-y-1 hover:border-[var(--color-brand)]/50 hover:shadow-lg"
+    >
+      <div>
+        <div className="flex items-start justify-between gap-2">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[var(--color-agent-teal)]/15 text-[var(--color-agent-teal)] font-bold">
+            <Building2 className="h-5 w-5" />
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border-soft)] bg-[var(--color-surface-2)] px-2 py-0.5 text-[10px] font-medium text-[var(--color-ink-dim)]">
+            {c.affiliation?.split("/")[0] || "Accredited"}
+          </span>
+        </div>
+
+        <h3 className="mt-3 font-semibold text-[var(--color-ink)] group-hover:text-[var(--color-brand)] transition-colors line-clamp-2">
+          {c.name}
+        </h3>
+
+        <p className="mt-1 inline-flex items-center gap-1 text-xs text-[var(--color-ink-faint)]">
+          <MapPin className="h-3 w-3 text-orange-500" />
+          <span className="font-medium text-[var(--color-ink-dim)]">{c.district || c.city}</span>, {c.state}
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
+          <div className="rounded-lg bg-[var(--color-surface-2)] p-2">
+            <span className="text-[var(--color-ink-faint)]">NAAC Grade</span>
+            <p className="font-semibold text-[var(--color-ink)]">{c.naac_grade || "A"}</p>
+          </div>
+          <div className="rounded-lg bg-[var(--color-surface-2)] p-2">
+            <span className="text-[var(--color-ink-faint)]">Tuition / Year</span>
+            <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+              {c.fee_per_year ? `₹${(c.fee_per_year / 100000).toFixed(2)} Lakh` : "Govt / Subsidized"}
+            </p>
+          </div>
+        </div>
+
+        {c.placement_stats && (
+          <div className="mt-2.5 flex items-center justify-between rounded-lg bg-[var(--color-surface-2)]/60 px-2.5 py-1.5 text-[11px] text-[var(--color-ink-dim)]">
+            <span className="inline-flex items-center gap-1">
+              <Briefcase className="h-3 w-3 text-indigo-500" />
+              Avg: ₹{c.placement_stats.avg_package || 7.5} LPA
+            </span>
+            <span className="font-semibold text-emerald-500">
+              {c.placement_stats.placement_pct || 85}% Placed
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-[var(--color-border-soft)]">
+        <span className="text-[11px] font-medium text-[var(--color-brand)] flex items-center justify-between">
+          <span>View Category Cutoffs & Details</span>
+          <Sparkles className="h-3 w-3" />
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -268,7 +417,7 @@ function IndiaCollegeDetailModal({ college, onClose }: { college: CollegeOut; on
         <div className="flex items-start justify-between gap-3">
           <div>
             <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[11px] font-medium text-orange-600 dark:text-orange-400">
-              {college.state} · {college.city}
+              {college.district || college.city} District · {college.state}
             </span>
             <h2 className="mt-1 font-display text-xl font-bold">{college.name}</h2>
             <p className="mt-0.5 text-xs text-[var(--color-ink-faint)]">{college.affiliation}</p>
