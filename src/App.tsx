@@ -10,7 +10,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
-import Colleges from "./pages/Colleges";
+import IndiaAdmissions from "./pages/IndiaAdmissions";
+import InternationalAdmissions from "./pages/InternationalAdmissions";
 import Chat from "./pages/Chat";
 import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
@@ -78,12 +79,24 @@ export default function App() {
               }
             />
             <Route
-              path="/colleges"
+              path="/admissions/india"
               element={
                 <RequireAuth>
-                  <Colleges />
+                  <IndiaAdmissions />
                 </RequireAuth>
               }
+            />
+            <Route
+              path="/admissions/international"
+              element={
+                <RequireAuth>
+                  <InternationalAdmissions />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/colleges"
+              element={<Navigate to="/admissions/india" replace />}
             />
             <Route
               path="/chat"
