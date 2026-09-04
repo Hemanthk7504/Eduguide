@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  GraduationCap,
   Loader2,
   Mail,
   CheckCircle2,
@@ -14,16 +13,19 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  User,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
 import { register as registerUser, checkVerification, resendVerification } from "../api/auth";
 import { useAuth } from "../hooks/useAuth";
-import { AuthLayout, Field } from "./Login";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { AuthLayout } from "../components/AuthLayout";
 
 const schema = z.object({
-  full_name: z.string().min(2, "Enter your full name"),
-  email: z.string().email("Enter a valid email"),
-  password: z.string().min(8, "At least 8 characters"),
+  full_name: z.string().min(2, "Please enter your full name"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -46,8 +48,11 @@ export default function Register() {
   const {
     register: field,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
+
+  const passwordValue = watch("password", "");
 
   // If navigated from login with pending verification
   useEffect(() => {
@@ -71,7 +76,7 @@ export default function Register() {
       }
       setStep("verification_pending");
     } catch (err: any) {
-      setServerError(err?.response?.data?.detail ?? "Couldn't create your account. Try again.");
+      setServerError(err?.response?.data?.detail ?? "Couldn't create your account. Please try again.");
     }
   }
 
@@ -86,20 +91,18 @@ export default function Register() {
       try {
         const res = await checkVerification(registeredEmail);
         if (res.is_verified && res.access_token) {
-          // User clicked verify in email! Stop polling and auto-login
+          // User verified! Auto-login
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           setStep("verified");
-
-          // Store auth token so user is logged in directly for the first time
           setToken(res.access_token);
 
-          // Redirect to onboarding after brief celebration animation
+          // Redirect to onboarding after quick celebratory animation
           setTimeout(() => {
             navigate("/onboarding");
           }, 1800);
         }
       } catch {
-        // Continue polling silently
+        // Silently continue polling
       }
     }
 
@@ -137,49 +140,73 @@ export default function Register() {
     }
   }
 
-  // State 2: Verification Pending (Waiting for user to click email link)
+  // Password strength calculation
+  const getPasswordStrength = () => {
+    if (!passwordValue) return 0;
+    let score = 0;
+    if (passwordValue.length >= 8) score += 1;
+    if (/[A-Z]/.test(passwordValue) || /[0-9]/.test(passwordValue)) score += 1;
+    if (/[^A-Za-z0-9]/.test(passwordValue)) score += 1;
+    return score;
+  };
+  const strength = getPasswordStrength();
+
+  // ----------------------------------------------------
+  // STATE 2: Verification Pending (Waiting for confirmation)
+  // ----------------------------------------------------
   if (step === "verification_pending") {
     return (
-      <AuthLayout>
-        <div className="space-y-6 text-center animate-in fade-in duration-200">
-          {/* Animated Mail Icon */}
-          <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-[var(--color-brand)] to-[var(--color-violet)] text-white shadow-xl shadow-[var(--color-brand)]/20">
-            <Mail className="h-9 w-9" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-4 w-4 rounded-full bg-emerald-500" />
-            </span>
+      <AuthLayout showShowcase={false}>
+        <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
+          
+          {/* Animated Mail Icon with Radar Rings */}
+          <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
+            <div className="relative flex h-18 w-18 items-center justify-center rounded-2xl bg-gradient-to-tr from-[var(--color-brand)] to-[var(--color-violet)] text-white shadow-xl shadow-indigo-500/25 ring-4 ring-indigo-500/20">
+              <Mail className="h-8 w-8" />
+            </div>
           </div>
 
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight">Check your email</h1>
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-[var(--color-brand)] dark:text-indigo-300">
+              <Sparkles className="h-3 w-3" />
+              <span>Email Sent</span>
+            </div>
+            <h1 className="mt-2 font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-ink)]">
+              Check your email
+            </h1>
             <p className="mt-2 text-sm text-[var(--color-ink-dim)] leading-relaxed">
-              We sent a verification link to <br />
-              <strong className="font-semibold text-[var(--color-ink)] font-mono">{registeredEmail}</strong>
+              We just sent an activation link to:
             </p>
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-2)] px-3.5 py-1.5 text-xs font-mono font-semibold text-[var(--color-ink)] shadow-2xs">
+              <Mail className="h-3.5 w-3.5 text-[var(--color-brand)]" />
+              <span>{registeredEmail}</span>
+            </div>
           </div>
 
-          {/* Real-time waiting indicator */}
-          <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-2)]/60 p-4">
-            <div className="flex items-center justify-center gap-2 text-xs font-semibold text-[var(--color-brand)]">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {/* Real-time Listening Status Box */}
+          <div className="overflow-hidden rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-2)]/60 p-4.5 text-left backdrop-blur-md">
+            <div className="flex items-center gap-2.5 text-xs font-bold text-[var(--color-brand)] dark:text-indigo-400">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
               <span>Waiting for confirmation...</span>
             </div>
-            <p className="mt-1 text-[11px] text-[var(--color-ink-faint)]">
-              Click the <strong>Verify</strong> button in your email. This page will{" "}
-              <strong>automatically refresh and log you in</strong> on the spot!
+            <p className="mt-1.5 text-xs text-[var(--color-ink-dim)] leading-relaxed">
+              Click the <strong>Verify</strong> link in your email. This page will <strong>automatically refresh and log you in</strong> on the spot!
             </p>
           </div>
 
           {/* Resend & Action Buttons */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-1">
             <button
               onClick={handleResend}
               disabled={resending || cooldown > 0}
-              className="btn-secondary w-full inline-flex items-center justify-center gap-2 text-xs font-medium"
+              className="btn-secondary w-full inline-flex items-center justify-center gap-2 text-xs font-semibold py-2.5"
             >
               {resending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--color-brand)]" />
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
@@ -189,20 +216,25 @@ export default function Register() {
             </button>
 
             {resendStatus && (
-              <p className="text-xs text-[var(--color-brand)] animate-in fade-in">{resendStatus}</p>
+              <p className="text-xs font-medium text-[var(--color-brand)] animate-in fade-in">
+                {resendStatus}
+              </p>
             )}
 
-            {/* Test helper link if SMTP credentials are still pending */}
+            {/* Instant Helper Link for local testing */}
             {devVerifyLink && (
-              <div className="pt-2">
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
+                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mb-1">
+                  Local Dev Helper (Direct Link):
+                </p>
                 <a
                   href={devVerifyLink}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  <span>Open Verification Link (Instant Test)</span>
+                  <span>Open Verification Link Directly</span>
                   <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -215,142 +247,265 @@ export default function Register() {
                 setStep("form");
                 setServerError(null);
               }}
-              className="text-xs text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"
+              className="text-xs font-medium text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] transition-colors"
             >
               ← Entered the wrong email? Start over
             </button>
           </div>
+
         </div>
       </AuthLayout>
     );
   }
 
-  // State 3: Verified! Auto-logging in
+  // ----------------------------------------------------
+  // STATE 3: Verified! Auto-logging in
+  // ----------------------------------------------------
   if (step === "verified") {
     return (
-      <AuthLayout>
+      <AuthLayout showShowcase={false}>
         <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-200">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500 ring-8 ring-emerald-500/10">
-            <CheckCircle2 className="h-12 w-12" />
+          
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white shadow-xl shadow-emerald-500/25 ring-4 ring-emerald-500/20">
+            <CheckCircle2 className="h-10 w-10" />
           </div>
+
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--color-ink)]">
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-ink)]">
               Email Verified!
             </h1>
-            <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-              Your account has been activated successfully.
+            <p className="mt-1.5 text-sm text-[var(--color-ink-dim)]">
+              Your account has been activated successfully. Welcome to EduGuide AI!
             </p>
           </div>
-          <div className="rounded-2xl bg-emerald-500/10 p-3.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-2">
+
+          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-2">
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
             <span>Logging you in directly for the first time...</span>
           </div>
+
           <button
             onClick={() => navigate("/onboarding")}
-            className="btn-primary w-full inline-flex items-center justify-center gap-2"
+            className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99]"
           >
-            <span>Continue</span>
-            <ArrowRight className="h-4 w-4" />
+            <span>Proceed to Onboarding</span>
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </button>
+
         </div>
       </AuthLayout>
     );
   }
 
-  // State 1: Registration Form
+  // ----------------------------------------------------
+  // STATE 1: Registration Form
+  // ----------------------------------------------------
   return (
     <AuthLayout>
-      <div className="mb-6 flex items-center gap-2">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-violet)]">
-          <GraduationCap className="h-5 w-5 text-white" />
-        </span>
-        <span className="font-display text-xl font-semibold">EduGuide AI</span>
-      </div>
-      <h1 className="font-display text-2xl font-semibold">Create your account</h1>
-      <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-        Enter your details to receive an instant verification link.
-      </p>
-
-      {/* Google Sign-up Button */}
-      <div className="mt-6">
-        <GoogleSignInButton
-          text="Sign up with Google"
-          onSuccess={(token) => {
-            setToken(token);
-            navigate("/onboarding");
-          }}
-          onVerificationRequired={(email, verifyLink) => {
-            setRegisteredEmail(email);
-            if (verifyLink) setDevVerifyLink(verifyLink);
-            setStep("verification_pending");
-          }}
-          onError={(msg) => setServerError(msg)}
-        />
-      </div>
-
-      <div className="relative my-5">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-[var(--color-border-soft)]" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-[var(--color-bg-raised)] px-2 text-[var(--color-ink-faint)]">
-            Or register with email
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Field label="Full name" error={errors.full_name?.message}>
-          <input className="input" placeholder="Hemanth Kumar" {...field("full_name")} />
-        </Field>
-        <Field label="Email address" error={errors.email?.message}>
-          <input type="email" className="input" placeholder="you@example.com" {...field("email")} />
-        </Field>
-
-        <Field label="Password" error={errors.password?.message}>
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              className="input pr-10"
-              placeholder="At least 8 characters"
-              {...field("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] transition-colors"
-              tabIndex={-1}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+      <div className="space-y-6">
+        
+        {/* Title Header */}
+        <div>
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[var(--color-brand)]/15 to-violet-500/15 px-2.5 py-1 text-xs font-semibold text-[var(--color-brand)] dark:text-indigo-300">
+            <Sparkles className="h-3 w-3" />
+            <span>Get Started · Free Access</span>
           </div>
-        </Field>
-
-        {serverError && (
-          <p className="rounded-lg bg-[var(--color-agent-red)]/10 px-3 py-2 text-sm text-[var(--color-agent-red)]">
-            {serverError}
+          <h1 className="mt-2.5 font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-ink)]">
+            Create your account
+          </h1>
+          <p className="mt-1.5 text-sm text-[var(--color-ink-dim)]">
+            Join thousands of students finding their dream colleges & scholarships.
           </p>
-        )}
+        </div>
 
-        <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
-          {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Sending verification email...
+        {/* Google One-Tap Action */}
+        <div>
+          <GoogleSignInButton
+            text="Sign up with Google"
+            onSuccess={(token) => {
+              setToken(token);
+              navigate("/onboarding");
+            }}
+            onVerificationRequired={(email, verifyLink) => {
+              setRegisteredEmail(email);
+              if (verifyLink) setDevVerifyLink(verifyLink);
+              setStep("verification_pending");
+            }}
+            onError={(msg) => setServerError(msg)}
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[var(--color-border-soft)]" />
+          </div>
+          <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+            <span className="bg-[var(--color-surface)] px-3 text-[var(--color-ink-faint)] font-medium">
+              Or register with email
             </span>
-          ) : (
-            <span>Create account & Send Verification Email</span>
-          )}
-        </button>
-      </form>
+          </div>
+        </div>
 
-      <p className="mt-6 text-center text-sm text-[var(--color-ink-dim)]">
-        Already have an account?{" "}
-        <Link to="/login" className="font-medium text-[var(--color-brand)] hover:text-[var(--color-brand-hover)]">
-          Sign in
-        </Link>
-      </p>
+        {/* Registration Form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          
+          {/* Full Name Field */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
+              Full Name
+            </label>
+            <div className="relative">
+              <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+              <input
+                type="text"
+                autoComplete="name"
+                className={`input pl-10 pr-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
+                  errors.full_name ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
+                }`}
+                placeholder="Hemanth Kumar"
+                {...field("full_name")}
+              />
+            </div>
+            {errors.full_name && (
+              <p className="mt-1 text-xs font-medium text-[var(--color-agent-red)] flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.full_name.message}
+              </p>
+            )}
+          </div>
+
+          {/* Email Field */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+              <input
+                type="email"
+                autoComplete="email"
+                className={`input pl-10 pr-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
+                  errors.email ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
+                }`}
+                placeholder="you@example.com"
+                {...field("email")}
+              />
+            </div>
+            {errors.email && (
+              <p className="mt-1 text-xs font-medium text-[var(--color-agent-red)] flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.email.message}
+              </p>
+            )}
+          </div>
+
+          {/* Password Field */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                className={`input pl-10 pr-11 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
+                  errors.password ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
+                }`}
+                placeholder="At least 8 characters"
+                {...field("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-2)] transition-colors"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {/* Dynamic Password Strength Indicator */}
+            {passwordValue && (
+              <div className="mt-2 space-y-1">
+                <div className="flex gap-1.5">
+                  <div
+                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                      strength >= 1 ? "bg-amber-500" : "bg-[var(--color-border-soft)]"
+                    }`}
+                  />
+                  <div
+                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                      strength >= 2 ? "bg-indigo-500" : "bg-[var(--color-border-soft)]"
+                    }`}
+                  />
+                  <div
+                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                      strength >= 3 ? "bg-emerald-500" : "bg-[var(--color-border-soft)]"
+                    }`}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-[var(--color-ink-faint)]">
+                  <span>Strength</span>
+                  <span className="font-semibold text-[var(--color-ink-dim)]">
+                    {strength === 1 ? "Weak" : strength === 2 ? "Good" : strength === 3 ? "Strong" : ""}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {errors.password && (
+              <p className="mt-1 text-xs font-medium text-[var(--color-agent-red)] flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.password.message}
+              </p>
+            )}
+          </div>
+
+          {/* Server Error Message */}
+          {serverError && (
+            <div className="rounded-xl border border-[var(--color-agent-red)]/20 bg-[var(--color-agent-red)]/10 p-3.5 text-xs text-[var(--color-agent-red)] flex items-start gap-2 animate-in fade-in duration-150">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span className="leading-relaxed">{serverError}</span>
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-[var(--color-brand)] to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all duration-200 hover:from-indigo-500 hover:to-violet-500 hover:shadow-indigo-600/35 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Sending verification email...</span>
+              </>
+            ) : (
+              <>
+                <span>Create Account & Verify</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Switch to Login */}
+        <div className="pt-2 text-center">
+          <p className="text-xs sm:text-sm text-[var(--color-ink-dim)]">
+            Already have an account?{" "}
+            <Link
+              to="/login"
+              className="font-semibold text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] transition-colors underline-offset-4 hover:underline"
+            >
+              Sign in here
+            </Link>
+          </p>
+        </div>
+
+      </div>
     </AuthLayout>
   );
 }

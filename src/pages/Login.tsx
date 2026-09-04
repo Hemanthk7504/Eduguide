@@ -3,14 +3,23 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { GraduationCap, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Mail,
+  Lock,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
 import { login } from "../api/auth";
 import { useAuth } from "../hooks/useAuth";
-import { ThemeToggle } from "../components/ThemeToggle";
 import { GoogleSignInButton } from "../components/GoogleSignInButton";
+import { AuthLayout } from "../components/AuthLayout";
 
 const schema = z.object({
-  email: z.string().email("Enter a valid email"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 type FormValues = z.infer<typeof schema>;
@@ -36,7 +45,7 @@ export default function Login() {
       setToken(access_token);
       navigate("/dashboard", { replace: true });
     } catch (err: any) {
-      const detail = err?.response?.data?.detail ?? "Couldn't sign in. Check your credentials.";
+      const detail = err?.response?.data?.detail ?? "Couldn't sign in. Please verify your credentials.";
       setServerError(detail);
       if (err?.response?.status === 403 || detail.toLowerCase().includes("verify")) {
         setUnverifiedEmail(values.email);
@@ -46,120 +55,174 @@ export default function Login() {
 
   return (
     <AuthLayout>
-      <div className="mb-6 flex items-center gap-2">
-        <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-violet)]">
-          <GraduationCap className="h-5 w-5 text-white" />
-        </span>
-        <span className="font-display text-xl font-semibold">EduGuide AI</span>
-      </div>
-      <h1 className="font-display text-2xl font-semibold">Welcome back</h1>
-      <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-        Sign in to see your personalized admission plan.
-      </p>
-
-      {/* Google Sign-in Button */}
-      <div className="mt-6">
-        <GoogleSignInButton
-          text="Sign in with Google"
-          onSuccess={(token) => {
-            setToken(token);
-            navigate("/dashboard", { replace: true });
-          }}
-          onVerificationRequired={(email, verifyLink) => {
-            navigate("/register", { state: { email, verifyLink } });
-          }}
-          onError={(msg) => setServerError(msg)}
-        />
-      </div>
-
-      <div className="relative my-5">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-[var(--color-border-soft)]" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-[var(--color-bg-raised)] px-2 text-[var(--color-ink-faint)]">
-            Or sign in with email
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <Field label="Email" error={errors.email?.message}>
-          <input
-            type="email"
-            className="input"
-            placeholder="you@example.com"
-            {...field("email")}
-          />
-        </Field>
-
-        <Field label="Password" error={errors.password?.message}>
-          <div className="relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              className="input pr-10"
-              placeholder="••••••••"
-              {...field("password")}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] transition-colors"
-              tabIndex={-1}
-              aria-label={showPassword ? "Hide password" : "Show password"}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
+      <div className="space-y-6">
+        
+        {/* Title Header */}
+        <div>
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-brand)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--color-brand)] dark:text-indigo-300">
+            <Sparkles className="h-3 w-3" />
+            <span>Welcome Back</span>
           </div>
-        </Field>
+          <h1 className="mt-2.5 font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-ink)]">
+            Sign in to EduGuide
+          </h1>
+          <p className="mt-1.5 text-sm text-[var(--color-ink-dim)]">
+            Access your personalized cutoffs, college matches, and scholarship reports.
+          </p>
+        </div>
 
-        {serverError && (
-          <div className="rounded-xl bg-[var(--color-agent-red)]/10 p-3 text-xs text-[var(--color-agent-red)] space-y-1.5">
-            <div className="flex items-center gap-1.5 font-semibold">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{serverError}</span>
+        {/* Google One-Tap Action */}
+        <div>
+          <GoogleSignInButton
+            text="Continue with Google"
+            onSuccess={(token) => {
+              setToken(token);
+              navigate("/dashboard", { replace: true });
+            }}
+            onVerificationRequired={(email, verifyLink) => {
+              navigate("/register", { state: { email, verifyLink } });
+            }}
+            onError={(msg) => setServerError(msg)}
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[var(--color-border-soft)]" />
+          </div>
+          <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
+            <span className="bg-[var(--color-surface)] px-3 text-[var(--color-ink-faint)] font-medium">
+              Or sign in with email
+            </span>
+          </div>
+        </div>
+
+        {/* Email & Password Form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          
+          {/* Email Field */}
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
+              Email Address
+            </label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+              <input
+                type="email"
+                autoComplete="email"
+                className={`input pl-10 pr-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
+                  errors.email ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
+                }`}
+                placeholder="you@example.com"
+                {...field("email")}
+              />
             </div>
-            {unverifiedEmail && (
-              <button
-                type="button"
-                onClick={() => navigate("/register", { state: { email: unverifiedEmail } })}
-                className="font-medium underline hover:text-[var(--color-brand)] block"
-              >
-                Go to Verification Screen & Resend Email →
-              </button>
+            {errors.email && (
+              <p className="mt-1 text-xs font-medium text-[var(--color-agent-red)] flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.email.message}
+              </p>
             )}
           </div>
-        )}
 
-        <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
-          {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Sign in
-        </button>
-      </form>
+          {/* Password Field */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="block text-xs font-semibold text-[var(--color-ink-dim)]">
+                Password
+              </label>
+            </div>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                className={`input pl-10 pr-11 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
+                  errors.password ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
+                }`}
+                placeholder="••••••••"
+                {...field("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-2)] transition-colors"
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            {errors.password && (
+              <p className="mt-1 text-xs font-medium text-[var(--color-agent-red)] flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {errors.password.message}
+              </p>
+            )}
+          </div>
 
-      <p className="mt-6 text-center text-sm text-[var(--color-ink-dim)]">
-        New to EduGuide?{" "}
-        <Link to="/register" className="font-medium text-[var(--color-brand)] hover:text-[var(--color-brand-hover)]">
-          Create an account
-        </Link>
-      </p>
+          {/* Error Message Box */}
+          {serverError && (
+            <div className="rounded-xl border border-[var(--color-agent-red)]/20 bg-[var(--color-agent-red)]/10 p-3.5 text-xs text-[var(--color-agent-red)] space-y-2 animate-in fade-in duration-150">
+              <div className="flex items-start gap-2 font-medium">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{serverError}</span>
+              </div>
+              {unverifiedEmail && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/register", { state: { email: unverifiedEmail } })}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-agent-red)]/15 px-2.5 py-1 font-semibold text-[var(--color-agent-red)] hover:bg-[var(--color-agent-red)]/25 transition-colors"
+                  >
+                    <span>Open Email Verification Screen →</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="group relative flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-[var(--color-brand)] to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all duration-200 hover:from-indigo-500 hover:to-violet-500 hover:shadow-indigo-600/35 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Signing in securely...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign in to Account</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Switch to Register */}
+        <div className="pt-2 text-center">
+          <p className="text-xs sm:text-sm text-[var(--color-ink-dim)]">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="font-semibold text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] transition-colors underline-offset-4 hover:underline"
+            >
+              Create an account for free
+            </Link>
+          </p>
+        </div>
+
+      </div>
     </AuthLayout>
   );
 }
 
-export function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative grid min-h-screen place-items-center px-4 py-10">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
-      <div className="w-full max-w-md">
-        <div className="card p-8 shadow-xl">{children}</div>
-      </div>
-    </div>
-  );
-}
-
+// Re-export Field and AuthLayout if any legacy component imports them
+export { AuthLayout };
 export function Field({
   label,
   error,
@@ -170,10 +233,10 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium text-[var(--color-ink-dim)]">{label}</span>
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">{label}</label>
       {children}
-      {error && <span className="mt-1 block text-xs text-[var(--color-agent-red)]">{error}</span>}
-    </label>
+      {error && <p className="mt-1 text-xs font-medium text-[var(--color-agent-red)]">{error}</p>}
+    </div>
   );
 }

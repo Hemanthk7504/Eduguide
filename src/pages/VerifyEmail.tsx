@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
-import { CheckCircle2, XCircle, Loader2, GraduationCap, ArrowRight, RefreshCw } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  ArrowRight,
+  RefreshCw,
+  Sparkles,
+} from "lucide-react";
 import { verifyEmail, resendVerification } from "../api/auth";
 import { useAuth } from "../hooks/useAuth";
+import { AuthLayout } from "../components/AuthLayout";
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -73,88 +81,112 @@ export default function VerifyEmail() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)] px-4 py-12">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[var(--color-border-soft)] bg-[var(--color-bg-raised)] p-8 shadow-2xl text-center">
-        {/* Logo */}
-        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-brand)] to-[var(--color-violet)] shadow-md">
-          <GraduationCap className="h-6 w-6 text-white" />
-        </div>
-
+    <AuthLayout showShowcase={false}>
+      <div className="space-y-6 text-center">
+        
         {/* State: Loading */}
         {status === "loading" && (
-          <div className="space-y-4">
-            <Loader2 className="mx-auto h-12 w-12 animate-spin text-[var(--color-brand)]" />
-            <h2 className="text-xl font-bold tracking-tight">Verifying your email...</h2>
-            <p className="text-sm text-[var(--color-ink-dim)]">
-              Please wait while we confirm your account access.
-            </p>
+          <div className="space-y-5 py-4">
+            <div className="relative mx-auto flex h-20 w-20 items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping" />
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-[var(--color-brand)] to-[var(--color-violet)] text-white shadow-xl shadow-indigo-500/25">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            </div>
+            <div>
+              <h2 className="font-display text-2xl font-bold tracking-tight text-[var(--color-ink)]">
+                Verifying your account
+              </h2>
+              <p className="mt-1.5 text-sm text-[var(--color-ink-dim)]">
+                Please wait while we confirm your email token and activate your profile...
+              </p>
+            </div>
           </div>
         )}
 
         {/* State: Success */}
         {status === "success" && (
-          <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500 ring-8 ring-emerald-500/10">
+          <div className="space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white shadow-xl shadow-emerald-500/25 ring-4 ring-emerald-500/20">
               <CheckCircle2 className="h-10 w-10" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-[var(--color-ink)]">
-              Email Verified!
-            </h2>
-            <p className="text-sm text-[var(--color-ink-dim)]">{message}</p>
-            <div className="rounded-2xl bg-emerald-500/10 p-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-              Logging you in directly for the first time...
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Account Activated</span>
+              </div>
+              <h2 className="mt-2 font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-ink)]">
+                Email Verified!
+              </h2>
+              <p className="mt-1.5 text-sm text-[var(--color-ink-dim)] leading-relaxed">
+                {message}
+              </p>
             </div>
-            <div className="pt-2">
-              <button
-                onClick={() => navigate("/onboarding")}
-                className="btn-primary w-full inline-flex items-center justify-center gap-2"
-              >
-                <span>Continue to Dashboard</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
+
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 flex items-center justify-center gap-2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <span>Redirecting you to onboarding...</span>
             </div>
+
+            <button
+              onClick={() => navigate("/onboarding")}
+              className="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99]"
+            >
+              <span>Continue to Onboarding</span>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
           </div>
         )}
 
         {/* State: Error */}
         {status === "error" && (
-          <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/15 text-rose-500 ring-8 ring-rose-500/10">
+          <div className="space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-tr from-rose-500 to-red-600 text-white shadow-xl shadow-rose-500/25 ring-4 ring-rose-500/20">
               <XCircle className="h-10 w-10" />
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-[var(--color-ink)]">
-              Verification Failed
-            </h2>
-            <p className="text-sm text-[var(--color-ink-dim)]">{message}</p>
+            <div>
+              <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-[var(--color-ink)]">
+                Verification Failed
+              </h2>
+              <p className="mt-1.5 text-sm text-[var(--color-ink-dim)] leading-relaxed">
+                {message}
+              </p>
+            </div>
 
             {email && (
-              <div className="pt-2 space-y-3">
+              <div className="space-y-3 pt-2">
                 <button
                   onClick={handleResend}
                   disabled={resending}
-                  className="btn-secondary w-full inline-flex items-center justify-center gap-2 text-xs"
+                  className="btn-secondary w-full inline-flex items-center justify-center gap-2 text-xs font-semibold py-2.5"
                 >
                   {resending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--color-brand)]" />
                   ) : (
                     <RefreshCw className="h-3.5 w-3.5" />
                   )}
                   <span>Resend Verification Email</span>
                 </button>
                 {resendStatus && (
-                  <p className="text-xs text-[var(--color-brand)]">{resendStatus}</p>
+                  <p className="text-xs font-medium text-[var(--color-brand)] animate-in fade-in">
+                    {resendStatus}
+                  </p>
                 )}
               </div>
             )}
 
             <div className="pt-4 border-t border-[var(--color-border-soft)]">
-              <Link to="/login" className="text-xs font-semibold text-[var(--color-brand)] hover:underline">
+              <Link
+                to="/login"
+                className="text-xs font-semibold text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] transition-colors underline-offset-4 hover:underline"
+              >
                 Back to Sign in
               </Link>
             </div>
           </div>
         )}
+
       </div>
-    </div>
+    </AuthLayout>
   );
 }
