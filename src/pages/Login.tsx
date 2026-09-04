@@ -79,8 +79,8 @@ export default function Login() {
               setToken(token);
               navigate("/dashboard", { replace: true });
             }}
-            onVerificationRequired={(email, verifyLink) => {
-              navigate("/register", { state: { email, verifyLink } });
+            onVerificationRequired={(email) => {
+              navigate("/register", { state: { email } });
             }}
             onError={(msg) => setServerError(msg)}
           />
@@ -106,14 +106,11 @@ export default function Login() {
             <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
               Email Address
             </label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+            <div className={`input-group ${errors.email ? "has-error" : ""}`}>
+              <Mail className="h-4 w-4 shrink-0 text-[var(--color-ink-faint)]" />
               <input
                 type="email"
                 autoComplete="email"
-                className={`input pl-10 pr-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
-                  errors.email ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
-                }`}
                 placeholder="you@example.com"
                 {...field("email")}
               />
@@ -133,21 +130,18 @@ export default function Login() {
                 Password
               </label>
             </div>
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+            <div className={`input-group ${errors.password ? "has-error" : ""}`}>
+              <Lock className="h-4 w-4 shrink-0 text-[var(--color-ink-faint)]" />
               <input
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
-                className={`input pl-10 pr-11 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
-                  errors.password ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
-                }`}
                 placeholder="••••••••"
                 {...field("password")}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-2)] transition-colors"
+                className="shrink-0 rounded-md p-0.5 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] transition-colors"
                 tabIndex={-1}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >

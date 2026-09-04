@@ -10,7 +10,6 @@ import {
   RefreshCw,
   ArrowRight,
   Sparkles,
-  ExternalLink,
   Eye,
   EyeOff,
   User,
@@ -36,7 +35,6 @@ export default function Register() {
 
   const [step, setStep] = useState<"form" | "verification_pending" | "verified">("form");
   const [registeredEmail, setRegisteredEmail] = useState<string>("");
-  const [devVerifyLink, setDevVerifyLink] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
@@ -58,9 +56,6 @@ export default function Register() {
   useEffect(() => {
     if (location.state?.email) {
       setRegisteredEmail(location.state.email);
-      if (location.state.verifyLink) {
-        setDevVerifyLink(location.state.verifyLink);
-      }
       setStep("verification_pending");
     }
   }, [location.state]);
@@ -69,11 +64,8 @@ export default function Register() {
   async function onSubmit(values: FormValues) {
     setServerError(null);
     try {
-      const res = await registerUser(values);
+      await registerUser(values);
       setRegisteredEmail(values.email);
-      if (res.verification_link) {
-        setDevVerifyLink(res.verification_link);
-      }
       setStep("verification_pending");
     } catch (err: any) {
       setServerError(err?.response?.data?.detail ?? "Couldn't create your account. Please try again.");
@@ -129,9 +121,6 @@ export default function Register() {
     try {
       const res = await resendVerification(registeredEmail);
       setResendStatus(res.message || "Verification email resent! Please check your inbox.");
-      if (res.verification_link) {
-        setDevVerifyLink(res.verification_link);
-      }
       setCooldown(30);
     } catch (err: any) {
       setResendStatus(err?.response?.data?.detail || "Failed to resend verification email.");
@@ -221,24 +210,7 @@ export default function Register() {
               </p>
             )}
 
-            {/* Instant Helper Link for local testing */}
-            {devVerifyLink && (
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mb-1">
-                  Local Dev Helper (Direct Link):
-                </p>
-                <a
-                  href={devVerifyLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:underline"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  <span>Open Verification Link Directly</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            )}
+
           </div>
 
           <div className="border-t border-[var(--color-border-soft)] pt-4">
@@ -326,9 +298,8 @@ export default function Register() {
               setToken(token);
               navigate("/onboarding");
             }}
-            onVerificationRequired={(email, verifyLink) => {
+            onVerificationRequired={(email) => {
               setRegisteredEmail(email);
-              if (verifyLink) setDevVerifyLink(verifyLink);
               setStep("verification_pending");
             }}
             onError={(msg) => setServerError(msg)}
@@ -355,15 +326,12 @@ export default function Register() {
             <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
               Full Name
             </label>
-            <div className="relative">
-              <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+            <div className={`input-group ${errors.full_name ? "has-error" : ""}`}>
+              <User className="h-4 w-4 shrink-0 text-[var(--color-ink-faint)]" />
               <input
                 type="text"
                 autoComplete="name"
-                className={`input pl-10 pr-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
-                  errors.full_name ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
-                }`}
-                placeholder="Hemanth Kumar"
+                placeholder="Enter your full name"
                 {...field("full_name")}
               />
             </div>
@@ -380,14 +348,11 @@ export default function Register() {
             <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
               Email Address
             </label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+            <div className={`input-group ${errors.email ? "has-error" : ""}`}>
+              <Mail className="h-4 w-4 shrink-0 text-[var(--color-ink-faint)]" />
               <input
                 type="email"
                 autoComplete="email"
-                className={`input pl-10 pr-4 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
-                  errors.email ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
-                }`}
                 placeholder="you@example.com"
                 {...field("email")}
               />
@@ -405,21 +370,18 @@ export default function Register() {
             <label className="mb-1.5 block text-xs font-semibold text-[var(--color-ink-dim)]">
               Password
             </label>
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-ink-faint)] transition-colors" />
+            <div className={`input-group ${errors.password ? "has-error" : ""}`}>
+              <Lock className="h-4 w-4 shrink-0 text-[var(--color-ink-faint)]" />
               <input
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
-                className={`input pl-10 pr-11 py-2.5 text-sm transition-all focus:ring-2 focus:ring-[var(--color-brand)]/20 ${
-                  errors.password ? "border-[var(--color-agent-red)] focus:border-[var(--color-agent-red)]" : ""
-                }`}
                 placeholder="At least 8 characters"
                 {...field("password")}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-2)] transition-colors"
+                className="shrink-0 rounded-md p-0.5 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)] transition-colors"
                 tabIndex={-1}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >

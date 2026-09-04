@@ -112,10 +112,58 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-ink-faint); }
 
-:focus-visible {
+:focus-visible:not(input):not(select):not(textarea) {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* Single-boundary input group with icon */
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-raised);
+  padding: 0.625rem 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-group:focus-within {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+.input-group.has-error {
+  border-color: var(--color-agent-red);
+}
+
+.input-group input,
+.input-group select {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-size: 0.875rem;
+  color: var(--color-ink);
+  min-width: 0;
+}
+
+.input-group input:focus,
+.input-group input:focus-visible,
+.input-group select:focus,
+.input-group select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.input-group input::placeholder {
+  color: var(--color-ink-faint);
 }
 
 @media (prefers-reduced-motion: reduce) {
