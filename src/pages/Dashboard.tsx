@@ -17,6 +17,10 @@ import {
   Briefcase,
   UserCog,
   Globe,
+  Trophy,
+  Award,
+  ListOrdered,
+  Layers,
 } from "lucide-react";
 import {
   Bar,
@@ -126,7 +130,7 @@ export default function Dashboard() {
               icon={Building2}
               color="var(--color-agent-teal)"
               title="College recommendations"
-              subtitle="Grouped by how competitive each option is for your profile"
+              subtitle="Ranked in sequential order as per admission fit, placement ROI, and top recommendation priority"
             >
               <CollegeRecommendations recommendations={data.college_recommendations} />
             </Section>
@@ -315,6 +319,8 @@ function Section({
 }
 
 function CollegeRecommendations({ recommendations }: { recommendations: any[] }) {
+  const [viewMode, setViewMode] = useState<"sequential" | "tiers">("sequential");
+
   if (!recommendations?.length) {
     return (
       <div className="card p-8 text-center border-dashed">
@@ -325,77 +331,229 @@ function CollegeRecommendations({ recommendations }: { recommendations: any[] })
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {TIER_ORDER.filter((tier) => recommendations.some((r) => r.tier === tier)).map((tier) => (
-        <div key={tier} className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <TierBadge tier={tier} />
-              <span className="text-xs font-medium text-[var(--color-ink-faint)]">
-                {recommendations.filter((r) => r.tier === tier).length} college match{recommendations.filter((r) => r.tier === tier).length === 1 ? "" : "es"}
-              </span>
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {recommendations
-              .filter((r) => r.tier === tier)
-              .map((r) => (
-                <div
-                  key={`${r.college_id}-${r.branch}`}
-                  className="card p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--color-brand)]/40 hover:shadow-lg flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <h4 className="font-display font-semibold text-[var(--color-ink)] leading-snug">
-                        {r.college_name}
-                      </h4>
-                    </div>
-                    <p className="mt-1 text-xs font-medium text-[var(--color-agent-teal)] flex items-center gap-1">
-                      <Compass className="h-3 w-3" /> {r.branch}
-                    </p>
-                    <p className="text-xs text-[var(--color-ink-faint)] flex items-center gap-1 mt-0.5">
-                      <MapPin className="h-3 w-3" /> {r.city}
-                    </p>
+  // Sort sequentially by recommendation_rank (1, 2, 3...)
+  const sortedRecs = [...recommendations].sort(
+    (a, b) => (a.recommendation_rank || 999) - (b.recommendation_rank || 999)
+  );
 
-                    <div className="mt-4 space-y-2 rounded-xl bg-[var(--color-surface-2)]/60 p-3 text-xs">
+  return (
+    <div className="space-y-5">
+      {/* View Switcher Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border-soft)] pb-3">
+        <div className="flex items-center gap-2 text-xs text-[var(--color-ink-dim)]">
+          <span className="font-semibold text-[var(--color-ink)]">{recommendations.length} Recommended Institutions</span>
+          <span>• Ordered by algorithmic recommendation priority</span>
+        </div>
+
+        <div className="flex items-center rounded-xl bg-[var(--color-surface-2)] p-1 text-xs">
+          <button
+            onClick={() => setViewMode("sequential")}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold transition-all ${
+              viewMode === "sequential"
+                ? "bg-[var(--color-bg-raised)] text-[var(--color-ink)] shadow-xs"
+                : "text-[var(--color-ink-dim)] hover:text-[var(--color-ink)]"
+            }`}
+          >
+            <ListOrdered className="h-3.5 w-3.5 text-[var(--color-brand)]" />
+            Top Ranked (1, 2, 3...)
+          </button>
+          <button
+            onClick={() => setViewMode("tiers")}
+            className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold transition-all ${
+              viewMode === "tiers"
+                ? "bg-[var(--color-bg-raised)] text-[var(--color-ink)] shadow-xs"
+                : "text-[var(--color-ink-dim)] hover:text-[var(--color-ink)]"
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5 text-[var(--color-agent-purple)]" />
+            Group by Tier
+          </button>
+        </div>
+      </div>
+
+      {/* Sequential Number Order (Default) */}
+      {viewMode === "sequential" && (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {sortedRecs.map((r, index) => {
+            const rankNum = r.recommendation_rank || index + 1;
+            const isTop1 = rankNum === 1;
+            const isTop2 = rankNum === 2;
+            const isTop3 = rankNum === 3;
+
+            return (
+              <div
+                key={`${r.college_id}-${r.branch}`}
+                className={`card p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between relative overflow-hidden ${
+                  isTop1
+                    ? "border-amber-400/60 bg-gradient-to-br from-amber-500/5 via-[var(--color-surface)] to-[var(--color-surface-2)] ring-1 ring-amber-400/30"
+                    : isTop2
+                    ? "border-blue-500/40 bg-gradient-to-br from-blue-500/5 via-[var(--color-surface)] to-[var(--color-surface-2)]"
+                    : isTop3
+                    ? "border-emerald-500/40 bg-gradient-to-br from-emerald-500/5 via-[var(--color-surface)] to-[var(--color-surface-2)]"
+                    : "hover:border-[var(--color-brand)]/40"
+                }`}
+              >
+                <div>
+                  {/* Sequential Rank Badge Header */}
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold shadow-xs ${
+                        isTop1
+                          ? "bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-amber-500/20"
+                          : isTop2
+                          ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/20"
+                          : isTop3
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-500/20"
+                          : "bg-[var(--color-surface-2)] text-[var(--color-ink)] border border-[var(--color-border)]"
+                      }`}
+                    >
+                      {isTop1 && <Trophy className="h-3.5 w-3.5" />}
+                      {isTop2 && <Sparkles className="h-3.5 w-3.5" />}
+                      {isTop3 && <Award className="h-3.5 w-3.5" />}
+                      <span>#{rankNum} {isTop1 ? "Top Recommendation" : isTop2 ? "Top Pick" : isTop3 ? "Strong Match" : "Recommendation"}</span>
+                    </span>
+                    <TierBadge tier={r.tier} />
+                  </div>
+
+                  <h4 className="font-display font-semibold text-[var(--color-ink)] text-base leading-snug">
+                    {r.college_name}
+                  </h4>
+
+                  <p className="mt-1.5 text-xs font-medium text-[var(--color-agent-teal)] flex items-center gap-1">
+                    <Compass className="h-3.5 w-3.5" /> {r.branch}
+                  </p>
+                  <p className="text-xs text-[var(--color-ink-faint)] flex items-center gap-1 mt-0.5">
+                    <MapPin className="h-3.5 w-3.5" /> {r.city}
+                  </p>
+
+                  <div className="mt-4 space-y-2 rounded-xl bg-[var(--color-surface-2)]/60 p-3 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[var(--color-ink-faint)]">Closing Cutoff Rank</span>
+                      <span className="font-mono font-bold text-[var(--color-ink)]">
+                        {r.closing_rank ? `#${Number(r.closing_rank).toLocaleString()}` : "Open"}
+                      </span>
+                    </div>
+                    {r.fee_per_year != null && (
                       <div className="flex justify-between items-center">
-                        <span className="text-[var(--color-ink-faint)]">Cutoff Rank</span>
-                        <span className="font-mono font-semibold text-[var(--color-ink)]">
-                          {r.closing_rank ? `#${Number(r.closing_rank).toLocaleString()}` : "N/A"}
+                        <span className="text-[var(--color-ink-faint)]">Annual Fee</span>
+                        <span className="font-mono font-medium text-[var(--color-ink)]">
+                          ₹{Number(r.fee_per_year).toLocaleString("en-IN")}
                         </span>
                       </div>
-                      {r.fee_per_year != null && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-[var(--color-ink-faint)]">Annual Fee</span>
-                          <span className="font-mono font-medium text-[var(--color-ink)]">
-                            ₹{Number(r.fee_per_year).toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                      )}
-                      {r.naac_grade && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-[var(--color-ink-faint)]">Accreditation</span>
-                          <span className="badge bg-[var(--color-agent-purple)]/15 text-[var(--color-agent-purple)] font-bold text-[10px] px-2 py-0.5">
-                            NAAC {r.naac_grade}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 border-t border-[var(--color-border-soft)] pt-3">
-                    <div className="mb-1 flex justify-between text-[11px] text-[var(--color-ink-faint)]">
-                      <span>Admission Likelihood</span>
-                      <span className="font-semibold text-[var(--color-ink)]">{r.admission_probability_pct ?? 75}%</span>
-                    </div>
-                    <ProbabilityBar value={r.admission_probability_pct} />
+                    )}
+                    {r.placement_stats?.avg_package && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--color-ink-faint)]">Avg Placement</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                          ₹{r.placement_stats.avg_package} LPA
+                        </span>
+                      </div>
+                    )}
+                    {r.naac_grade && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--color-ink-faint)]">Accreditation</span>
+                        <span className="badge bg-[var(--color-agent-purple)]/15 text-[var(--color-agent-purple)] font-bold text-[10px] px-2 py-0.5">
+                          NAAC {r.naac_grade}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-          </div>
+
+                <div className="mt-4 border-t border-[var(--color-border-soft)] pt-3">
+                  <div className="mb-1 flex justify-between text-[11px] text-[var(--color-ink-faint)]">
+                    <span>Admission Likelihood</span>
+                    <span className="font-semibold text-[var(--color-ink)]">{r.admission_probability_pct ?? 75}%</span>
+                  </div>
+                  <ProbabilityBar value={r.admission_probability_pct} />
+                </div>
+              </div>
+            );
+          })}
         </div>
-      ))}
+      )}
+
+      {/* Group by Tier View */}
+      {viewMode === "tiers" && (
+        <div className="space-y-6">
+          {TIER_ORDER.filter((tier) => recommendations.some((r) => r.tier === tier)).map((tier) => (
+            <div key={tier} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <TierBadge tier={tier} />
+                  <span className="text-xs font-medium text-[var(--color-ink-faint)]">
+                    {recommendations.filter((r) => r.tier === tier).length} college match{recommendations.filter((r) => r.tier === tier).length === 1 ? "" : "es"}
+                  </span>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {recommendations
+                  .filter((r) => r.tier === tier)
+                  .sort((a, b) => (a.recommendation_rank || 999) - (b.recommendation_rank || 999))
+                  .map((r, index) => {
+                    const rankNum = r.recommendation_rank || index + 1;
+                    return (
+                      <div
+                        key={`${r.college_id}-${r.branch}`}
+                        className="card p-5 transition-all duration-200 hover:-translate-y-1 hover:border-[var(--color-brand)]/40 hover:shadow-lg flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="badge bg-[var(--color-surface-2)] text-[var(--color-ink)] font-bold text-xs px-2.5 py-0.5 border border-[var(--color-border)]">
+                              #{rankNum} Recommendation
+                            </span>
+                          </div>
+                          <h4 className="font-display font-semibold text-[var(--color-ink)] leading-snug">
+                            {r.college_name}
+                          </h4>
+                          <p className="mt-1 text-xs font-medium text-[var(--color-agent-teal)] flex items-center gap-1">
+                            <Compass className="h-3 w-3" /> {r.branch}
+                          </p>
+                          <p className="text-xs text-[var(--color-ink-faint)] flex items-center gap-1 mt-0.5">
+                            <MapPin className="h-3 w-3" /> {r.city}
+                          </p>
+
+                          <div className="mt-4 space-y-2 rounded-xl bg-[var(--color-surface-2)]/60 p-3 text-xs">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[var(--color-ink-faint)]">Cutoff Rank</span>
+                              <span className="font-mono font-semibold text-[var(--color-ink)]">
+                                {r.closing_rank ? `#${Number(r.closing_rank).toLocaleString()}` : "N/A"}
+                              </span>
+                            </div>
+                            {r.fee_per_year != null && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-[var(--color-ink-faint)]">Annual Fee</span>
+                                <span className="font-mono font-medium text-[var(--color-ink)]">
+                                  ₹{Number(r.fee_per_year).toLocaleString("en-IN")}
+                                </span>
+                              </div>
+                            )}
+                            {r.naac_grade && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-[var(--color-ink-faint)]">Accreditation</span>
+                                <span className="badge bg-[var(--color-agent-purple)]/15 text-[var(--color-agent-purple)] font-bold text-[10px] px-2 py-0.5">
+                                  NAAC {r.naac_grade}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 border-t border-[var(--color-border-soft)] pt-3">
+                          <div className="mb-1 flex justify-between text-[11px] text-[var(--color-ink-faint)]">
+                            <span>Admission Likelihood</span>
+                            <span className="font-semibold text-[var(--color-ink)]">{r.admission_probability_pct ?? 75}%</span>
+                          </div>
+                          <ProbabilityBar value={r.admission_probability_pct} />
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -403,15 +561,19 @@ function CollegeRecommendations({ recommendations }: { recommendations: any[] })
 function AdmissionProbabilityChart({
   rows,
 }: {
-  rows: { college_name: string; branch: string; probability_pct: number | null }[];
+  rows: { college_name: string; branch: string; probability_pct: number | null; recommendation_rank?: number }[];
 }) {
   const chartData = rows
     .filter((r) => r.probability_pct != null)
     .slice(0, 8)
-    .map((r) => ({
-      name: r.college_name.length > 20 ? r.college_name.slice(0, 20) + "…" : r.college_name,
-      probability: r.probability_pct,
-    }));
+    .map((r, i) => {
+      const rankNum = r.recommendation_rank || i + 1;
+      const rawName = r.college_name.length > 18 ? r.college_name.slice(0, 18) + "…" : r.college_name;
+      return {
+        name: `#${rankNum} ${rawName}`,
+        probability: r.probability_pct,
+      };
+    });
 
   if (!chartData.length) return null;
 

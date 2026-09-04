@@ -143,6 +143,7 @@ export interface CollegeRecommendation {
   placement_stats: PlacementStats;
   tier: Tier;
   admission_probability_pct: number | null;
+  recommendation_rank?: number;
 }
 
 export interface ScholarshipMatch {
