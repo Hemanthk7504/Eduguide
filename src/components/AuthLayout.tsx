@@ -17,7 +17,7 @@ interface AuthLayoutProps {
 
 export function AuthLayout({ children, showShowcase = true }: AuthLayoutProps) {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[var(--color-bg)] font-sans">
+    <div className="relative flex min-h-screen flex-col w-full overflow-hidden bg-[var(--color-bg)] font-sans">
       {/* Background Decorative Mesh & Glows */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         {/* Glow 1 - Top Left */}
@@ -77,11 +77,10 @@ export function AuthLayout({ children, showShowcase = true }: AuthLayoutProps) {
 
       {/* Main Container */}
       <main className="relative z-10 mx-auto flex w-full max-w-7xl flex-1 items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid w-full items-center gap-12 lg:grid-cols-12 lg:gap-8">
-          
-          {/* Left Column: Visual Showcase (Visible on Large Screens) */}
-          {showShowcase && (
-            <div className="hidden lg:col-span-6 lg:flex lg:flex-col lg:justify-center pr-4 xl:pr-10">
+        {showShowcase ? (
+          <div className="grid w-full items-center gap-12 lg:grid-cols-12 lg:gap-8">
+            {/* Left Column: Visual Showcase (Visible on Large Screens) */}
+            <div className="hidden lg:col-span-6 xl:col-span-6 lg:flex lg:flex-col lg:justify-center pr-4 xl:pr-10">
               
               {/* Pill Badge */}
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3.5 py-1.5 text-xs font-semibold text-[var(--color-brand)] dark:text-indigo-300 backdrop-blur-md shadow-xs">
@@ -181,11 +180,33 @@ export function AuthLayout({ children, showShowcase = true }: AuthLayoutProps) {
               </div>
 
             </div>
-          )}
 
-          {/* Right Column: Sleek Auth Form Container */}
-          <div className={`w-full ${showShowcase ? "lg:col-span-6 xl:col-span-6" : "max-w-lg mx-auto"}`}>
-            <div className="mx-auto w-full max-w-[480px]">
+            {/* Right Column: Sleek Auth Form Container */}
+            <div className="col-span-12 w-full lg:col-span-6 xl:col-span-6">
+              <div className="mx-auto w-full max-w-[480px]">
+                <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)]/85 p-6 sm:p-9 shadow-2xl backdrop-blur-2xl ring-1 ring-white/10 dark:ring-white/5 transition-all">
+                  {/* Subtle top card glow line */}
+                  <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--color-brand)] to-transparent opacity-80" />
+                  
+                  {children}
+                </div>
+
+                {/* Bottom Copyright & Security note */}
+                <div className="mt-6 text-center text-xs text-[var(--color-ink-faint)] flex items-center justify-center gap-2">
+                  <span>&copy; {new Date().getFullYear()} EduGuide AI Inc.</span>
+                  <span>•</span>
+                  <Link to="/" className="hover:underline hover:text-[var(--color-ink-dim)]">Privacy</Link>
+                  <span>•</span>
+                  <Link to="/" className="hover:underline hover:text-[var(--color-ink-dim)]">Terms</Link>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        ) : (
+          /* Centered Layout when Showcase is hidden (e.g. Verification Pending, Verified) */
+          <div className="flex w-full items-center justify-center py-4">
+            <div className="w-full max-w-[480px]">
               <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)]/85 p-6 sm:p-9 shadow-2xl backdrop-blur-2xl ring-1 ring-white/10 dark:ring-white/5 transition-all">
                 {/* Subtle top card glow line */}
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-[var(--color-brand)] to-transparent opacity-80" />
@@ -203,8 +224,7 @@ export function AuthLayout({ children, showShowcase = true }: AuthLayoutProps) {
               </div>
             </div>
           </div>
-
-        </div>
+        )}
       </main>
     </div>
   );
