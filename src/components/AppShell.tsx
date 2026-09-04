@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   LogOut,
   GraduationCap,
+  UserCog,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { AgentRail } from "./AgentRail";
@@ -16,6 +17,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/profile-settings", label: "Profile Settings", icon: UserCog },
   { to: "/colleges", label: "Colleges", icon: Building2 },
   { to: "/chat", label: "Chat", icon: MessageCircle },
   { to: "/reports", label: "Reports", icon: FileText },

@@ -8,6 +8,7 @@ import type { CollegeOut } from "../types/api";
 
 export default function Colleges() {
   const [city, setCity] = useState("");
+  const [stateFilter, setStateFilter] = useState("");
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<CollegeOut | null>(null);
 
@@ -16,21 +17,32 @@ export default function Colleges() {
     queryFn: () => listColleges(city || undefined),
   });
 
-  const cities = useMemo(() => {
-    const set = new Set((data ?? []).map((c) => c.city));
+  const states = useMemo(() => {
+    const set = new Set((data ?? []).map((c) => c.state).filter(Boolean));
     return Array.from(set).sort();
   }, [data]);
 
-  const filtered = (data ?? []).filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const cities = useMemo(() => {
+    const relevant = stateFilter
+      ? (data ?? []).filter((c) => c.state === stateFilter)
+      : data ?? [];
+    const set = new Set(relevant.map((c) => c.city));
+    return Array.from(set).sort();
+  }, [data, stateFilter]);
+
+  const filtered = (data ?? []).filter((c) => {
+    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
+    const matchesState = stateFilter ? c.state === stateFilter : true;
+    const matchesCity = city ? c.city === city : true;
+    return matchesSearch && matchesState && matchesCity;
+  });
 
   return (
     <AppShell>
       <div className="mx-auto max-w-6xl">
         <h1 className="font-display text-2xl font-semibold">College directory</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-          Browse colleges and view branch-wise cutoffs.
+          Browse colleges, engineering programs, and cutoffs across Telangana, Andhra Pradesh, and other states.
         </p>
 
         <div className="mt-5 flex flex-wrap gap-3">
@@ -43,6 +55,23 @@ export default function Colleges() {
               className="input pl-9"
             />
           </div>
+          {states.length > 0 && (
+            <select
+              value={stateFilter}
+              onChange={(e) => {
+                setStateFilter(e.target.value);
+                setCity("");
+              }}
+              className="input w-auto"
+            >
+              <option value="">All States</option>
+              {states.map((s) => (
+                <option key={s} value={s!}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
           <select value={city} onChange={(e) => setCity(e.target.value)} className="input w-auto">
             <option value="">All cities</option>
             {cities.map((c) => (

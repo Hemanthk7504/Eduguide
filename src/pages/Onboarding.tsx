@@ -1,22 +1,25 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, GraduationCap, Loader2 } from "lucide-react";
 import { createProfile, validateProfile } from "../api/profiles";
+import { useAuth } from "../hooks/useAuth";
 import { TagInput } from "../components/TagInput";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { COUNTRIES, ALL_CATEGORIES } from "../lib/countryExams";
 import type { StudentProfileCreate } from "../types/api";
 
-const EXAM_TYPES = ["EAMCET", "JEE", "NEET", "ECET", "OTHER"];
-const CATEGORIES = ["OC", "BC-A", "BC-B", "BC-C", "BC-D", "BC-E", "SC", "ST", "EWS"];
-
-const STEPS = ["Academics", "Preferences", "Background"] as const;
+const STEPS = ["Academics & Target", "Preferences", "Background"] as const;
 
 const initialForm: StudentProfileCreate = {
   full_name: "",
+  country: "India",
+  state: "Telangana",
+  target_degree: "B.Tech / B.E.",
   marks_percentage: undefined,
   entrance_rank: undefined,
-  exam_type: "",
-  category: "",
+  exam_score: undefined,
+  exam_type: "TG EAPCET (Telangana EAPCET)",
+  category: "OC",
   gender: "",
   preferred_branch: "",
   budget_max: undefined,
@@ -28,11 +31,38 @@ const initialForm: StudentProfileCreate = {
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<StudentProfileCreate>(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.full_name && !form.full_name) {
+      setForm((f) => ({ ...f, full_name: user.full_name }));
+    }
+  }, [user]);
+
+  const selectedCountry = useMemo(() => {
+    return COUNTRIES.find((c) => c.name === (form.country || "India")) || COUNTRIES[0];
+  }, [form.country]);
+
+  const availableExams = selectedCountry.exams;
+  const availableStates = selectedCountry.states || [];
+  const availableDegrees = selectedCountry.degrees;
+
+  function handleCountryChange(countryName: string) {
+    const c = COUNTRIES.find((item) => item.name === countryName) || COUNTRIES[0];
+    setForm((f) => ({
+      ...f,
+      country: c.name,
+      state: c.states && c.states.length > 0 ? c.states[0] : "",
+      target_degree: c.degrees[0],
+      exam_type: c.exams[0],
+      category: c.name === "India" ? "OC" : "International",
+    }));
+  }
 
   function update<K extends keyof StudentProfileCreate>(key: K, value: StudentProfileCreate[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -49,18 +79,35 @@ export default function Onboarding() {
     setSubmitting(true);
     setError(null);
     try {
-      const created = await createProfile(form);
+      const cleanedPayload: StudentProfileCreate = {
+        ...form,
+        full_name: form.full_name?.trim() || user?.full_name || "Student",
+        country: form.country || "India",
+        state: form.state || undefined,
+        target_degree: form.target_degree || "B.Tech / B.E.",
+        exam_type: form.exam_type || undefined,
+        category: form.category || undefined,
+        gender: form.gender || undefined,
+        preferred_branch: form.preferred_branch?.trim() || undefined,
+        preferred_city: form.preferred_city?.trim() || undefined,
+      };
+      const created = await createProfile(cleanedPayload);
       const validated = await validateProfile(created.id);
       const w = validated.normalized_data?.validation_warnings ?? [];
       if (w.length) {
         setWarnings(w);
         setSubmitting(false);
-        // Give the student a moment to see warnings before continuing
         return;
       }
       navigate(`/dashboard/${created.id}`);
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "Couldn't save your profile. Please try again.");
+      const detail = err?.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d: any) => d.msg || JSON.stringify(d)).join(", ")
+        : typeof detail === "string"
+        ? detail
+        : "Couldn't save your profile. Please check your inputs.";
+      setError(message);
       setSubmitting(false);
     }
   }
@@ -83,7 +130,8 @@ export default function Onboarding() {
         <div className="card mt-6 p-6 md:p-8">
           {step === 0 && (
             <div className="space-y-4">
-              <h2 className="font-display text-lg font-semibold">Tell us about your academics</h2>
+              <h2 className="font-display text-lg font-semibold">Tell us about your target & academics</h2>
+              
               <Row>
                 <LabeledField label="Full name">
                   <input
@@ -93,7 +141,94 @@ export default function Onboarding() {
                     placeholder="Your name"
                   />
                 </LabeledField>
-                <LabeledField label="Marks (%)">
+                <LabeledField label="Target Country">
+                  <select
+                    className="input"
+                    value={form.country || "India"}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                  >
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.name}>
+                        {c.name} ({c.defaultCurrency})
+                      </option>
+                    ))}
+                  </select>
+                </LabeledField>
+              </Row>
+
+              <Row>
+                <LabeledField label={form.country === "India" ? "State / Region" : "Province / State"}>
+                  <select
+                    className="input"
+                    value={form.state || ""}
+                    onChange={(e) => update("state", e.target.value)}
+                  >
+                    {availableStates.map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </LabeledField>
+
+                <LabeledField label="Target Degree">
+                  <select
+                    className="input"
+                    value={form.target_degree || ""}
+                    onChange={(e) => update("target_degree", e.target.value)}
+                  >
+                    {availableDegrees.map((deg) => (
+                      <option key={deg} value={deg}>
+                        {deg}
+                      </option>
+                    ))}
+                  </select>
+                </LabeledField>
+              </Row>
+
+              <Row>
+                <LabeledField label="Entrance Exam">
+                  <select
+                    className="input"
+                    value={form.exam_type}
+                    onChange={(e) => update("exam_type", e.target.value)}
+                  >
+                    <option value="">Select entrance exam</option>
+                    {availableExams.map((e) => (
+                      <option key={e} value={e}>
+                        {e}
+                      </option>
+                    ))}
+                  </select>
+                </LabeledField>
+
+                {form.country === "India" ? (
+                  <LabeledField label="Entrance Rank">
+                    <input
+                      type="number"
+                      min={1}
+                      className="input"
+                      value={form.entrance_rank ?? ""}
+                      onChange={(e) => update("entrance_rank", numOrUndefined(e.target.value))}
+                      placeholder="e.g. 4521"
+                    />
+                  </LabeledField>
+                ) : (
+                  <LabeledField label="Exam Score / Percentile">
+                    <input
+                      type="number"
+                      step="any"
+                      className="input"
+                      value={form.exam_score ?? ""}
+                      onChange={(e) => update("exam_score", numOrUndefined(e.target.value))}
+                      placeholder="e.g. 1450 (SAT) or 7.5 (IELTS)"
+                    />
+                  </LabeledField>
+                )}
+              </Row>
+
+              <Row>
+                <LabeledField label="Class 12 / Degree Marks (%)">
                   <input
                     type="number"
                     min={0}
@@ -104,47 +239,21 @@ export default function Onboarding() {
                     placeholder="e.g. 92.5"
                   />
                 </LabeledField>
-              </Row>
-              <Row>
-                <LabeledField label="Entrance rank">
-                  <input
-                    type="number"
-                    min={1}
-                    className="input"
-                    value={form.entrance_rank ?? ""}
-                    onChange={(e) => update("entrance_rank", numOrUndefined(e.target.value))}
-                    placeholder="e.g. 4521"
-                  />
-                </LabeledField>
-                <LabeledField label="Exam type">
+
+                <LabeledField label="Category / Status">
                   <select
                     className="input"
-                    value={form.exam_type}
-                    onChange={(e) => update("exam_type", e.target.value)}
+                    value={form.category}
+                    onChange={(e) => update("category", e.target.value)}
                   >
-                    <option value="">Select exam</option>
-                    {EXAM_TYPES.map((e) => (
-                      <option key={e} value={e}>
-                        {e}
+                    {ALL_CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
                       </option>
                     ))}
                   </select>
                 </LabeledField>
               </Row>
-              <LabeledField label="Reservation category">
-                <select
-                  className="input"
-                  value={form.category}
-                  onChange={(e) => update("category", e.target.value)}
-                >
-                  <option value="">Select category</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </LabeledField>
             </div>
           )}
 

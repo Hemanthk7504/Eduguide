@@ -14,14 +14,47 @@ export interface LoginResponse {
 }
 
 // ---- Student Profile ----
-export type ExamType = "EAMCET" | "JEE" | "NEET" | "ECET" | "OTHER";
-export type Category = "OC" | "BC-A" | "BC-B" | "BC-C" | "BC-D" | "BC-E" | "SC" | "ST" | "EWS";
+export type ExamType =
+  | "TG EAPCET"
+  | "AP EAPCET"
+  | "JEE Main"
+  | "JEE Advanced"
+  | "NEET"
+  | "BITSAT"
+  | "KCET"
+  | "MHT-CET"
+  | "WBJEE"
+  | "KEAM"
+  | "TNEA"
+  | "SAT"
+  | "ACT"
+  | "GRE"
+  | "IELTS"
+  | "TOEFL"
+  | "OTHER";
+
+export type Category =
+  | "OC"
+  | "BC-A"
+  | "BC-B"
+  | "BC-C"
+  | "BC-D"
+  | "BC-E"
+  | "SC"
+  | "ST"
+  | "EWS"
+  | "General"
+  | "International";
 
 export interface StudentProfileCreate {
   full_name: string;
   marks_percentage?: number;
   entrance_rank?: number;
+  exam_score?: number;
   exam_type?: ExamType | string;
+  country?: string;
+  state?: string;
+  target_degree?: string;
   category?: Category | string;
   gender?: string;
   preferred_branch?: string;

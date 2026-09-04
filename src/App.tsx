@@ -16,6 +16,7 @@ import Reports from "./pages/Reports";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
 import DashboardRedirect from "./pages/DashboardRedirect";
+import ProfileSettings from "./pages/ProfileSettings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,22 @@ export default function App() {
               element={
                 <RequireAuth>
                   <DashboardRedirect />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/profile-settings"
+              element={
+                <RequireAuth>
+                  <ProfileSettings />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/profile-settings/:profileId"
+              element={
+                <RequireAuth>
+                  <ProfileSettings />
                 </RequireAuth>
               }
             />
