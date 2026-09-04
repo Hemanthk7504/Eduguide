@@ -9,6 +9,39 @@ interface GoogleSignInButtonProps {
   onError: (errorMsg: string) => void;
 }
 
+async function ensureGoogleLoaded(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if ((window as any).google?.accounts?.oauth2) return true;
+
+  return new Promise((resolve) => {
+    let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]') as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      document.head.appendChild(script);
+    }
+
+    const checkInterval = setInterval(() => {
+      if ((window as any).google?.accounts?.oauth2) {
+        clearInterval(checkInterval);
+        resolve(true);
+      }
+    }, 100);
+
+    script.addEventListener("load", () => {
+      clearInterval(checkInterval);
+      resolve(true);
+    });
+
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      resolve(!!(window as any).google?.accounts?.oauth2);
+    }, 4000);
+  });
+}
+
 export function GoogleSignInButton({
   text = "Continue with Google",
   onSuccess,
@@ -19,18 +52,21 @@ export function GoogleSignInButton({
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
-  function handleGoogleOAuthClick() {
+  async function handleGoogleOAuthClick() {
     if (!googleClientId) {
       onError("Google Client ID is not configured. Please set VITE_GOOGLE_CLIENT_ID in .env.");
       return;
     }
 
-    if (typeof window === "undefined" || !(window as any).google?.accounts?.oauth2) {
-      onError("Google Identity Services is initializing. Please try again in a moment.");
+    setLoading(true);
+
+    const isLoaded = await ensureGoogleLoaded();
+    if (!isLoaded) {
+      setLoading(false);
+      onError("Unable to connect to Google Identity Services. Check your internet connection or ad-blocker.");
       return;
     }
 
-    setLoading(true);
     try {
       const client = (window as any).google.accounts.oauth2.initTokenClient({
         client_id: googleClientId,
@@ -38,7 +74,9 @@ export function GoogleSignInButton({
         callback: async (tokenResponse: any) => {
           if (tokenResponse.error) {
             setLoading(false);
-            onError(`Google Sign-in was cancelled or encountered an error: ${tokenResponse.error}`);
+            if (tokenResponse.error !== "access_denied") {
+              onError(`Google Sign-in failed: ${tokenResponse.error_description || tokenResponse.error}`);
+            }
             return;
           }
 
@@ -61,7 +99,7 @@ export function GoogleSignInButton({
             });
 
             if (!res.is_verified) {
-              // As requested: even when authenticating with Google, user must verify email via SMTP
+              // Enforce email verification via SMTP even for Google OAuth
               onVerificationRequired(googleProfile.email);
             } else if (res.access_token) {
               onSuccess(res.access_token);
